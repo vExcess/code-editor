@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PJS Editor</title>
+  <style>
+    body {
+      margin: 10px;
+      padding-bottom: 10px;
+    }
+
+    button {
+      margin-left: 3px;
+      margin-right: 0px;
+      margin-top: 4px;
+      margin-bottom: 5px;
+      padding: 6px;
+      padding-left: 10px;
+      padding-right: 10px;
+      background-color: white;
+      border: 1px gray solid;
+      border-radius: 3px;
+      color: rgb(24, 101, 242);
+      font-family: sans-serif;
+      font-size: 16px;
+      font-weight: 400;
+    }
+    button:hover{
+      border: 2px rgb(24, 101, 242) solid;
+      margin-left: 1px;
+      margin-top: 3px;
+      margin-bottom: 4px;
+    }
+
+    #editor {
+      margin-right: 5px;
+      margin-bottom: 0px;
+    }
+
+    #canvasBox {
+      margin: 0px;
+      padding: 0px;
+    }
+    canvas {
+      margin: 0px;
+      padding: 0px;
+      border: 1px black solid;
+    }
+
+    #settings {
+      width: 80%;
+      height: 400px;
+      transform: translate(9%, 75px);
+      background-color: white;
+      position: absolute;
+      color: black;
+      font-family: sans-serif;
+      border: 4px black solid;
+      border-radius: 10px;
+      padding: 8px;
+      padding-top: 0px;
+      font-size: 15px;
+      overflow: auto;
+      z-index: 2;
+      display: none;
+    }
+    #settings p {
+      background-color: rgb(100, 100, 100);
+      height: 0.5px;
+    }
+    #settings h1 {
+      margin-bottom: 5px;
+    }
+    #settings h3 {
+      color: rgb(50, 50, 50);
+      margin-bottom: 5px;
+    }
+    #settings select {
+      margin: 1px;
+      color: rgb(50, 50, 50);
+      border: 1px black solid;
+      border-radius: 4px;
+    }
+    #settings select:hover {
+      margin-top: -1px;
+      color: rgb(50, 50, 50);
+      border: 2px rgb(24, 101, 242) solid;
+      border-radius: 4px;
+    }
+
+    #buttonsBox {
+      margin: 0px;
+      padding: 0px;
+      padding-left: 3px;
+      border: 1px gray solid;
+    }
+  </style>
+  <script src="libs/ace/ace.js"></script>
+</head>
+<body>
+  
+  <div id="settings">
+    <h1>Settings</h1>
+    
+    <p></p>
+    
+    <h3>Width</h3>
+    <select id="canvasWidth">
+      <option value="400">400 (default)</option>
+      <option value="500">500</option>
+      <option value="600">600</option>
+    </select>
+        
+    <h3>Height</h3>
+    <select id="canvasHeight">
+      <option value="400">400 (default)</option>
+      <option value="500">500</option>
+      <option value="600">600</option>
+    </select>
+    
+    <h3>Indent Width</h3>
+    <select id="indentSize">
+      <option value="2">2 spaces</option>
+      <option value="4">4 spaces (default)</option>
+    </select>
+    
+    <h3>Font Size</h3>
+    <select id="fontSize">
+      <option value="10">10px</option>
+      <option value="12">12px (default)</option>
+      <option value="14">14px</option>
+      <option value="16">16px</option>
+    </select>
+    
+    <p></p>
+    
+    <button id="settings_cancelButton">Cancel</button>
+    <button id="settings_saveButton">Save and Close</button>
+    
+  </div>
+  
+  <div style="display: flex; margin: 0px; padding: 0px;">
+    <div id="editor"></div>
+    <div id="canvasBox"></div>
+  </div>
+  
+  <div id="buttonsBox">
+    <button id="fullscreenButton">Fullscreen</button>
+    <button id="settingsButton">Settings</button>
+    <button id="runButton">Run</button>
+    <button id="stopButton">Stop</button>
+  </div>
+  
+  <br>
+  
+  <script>
+var settings = {
+  width: 400,
+  height: 400,
+  indentSize: 4,
+  fontSize: 12,
+};
+
+var settingsELs = {
+  width: document.getElementById("canvasWidth"),
+  height: document.getElementById("canvasHeight"),
+  indentSize: document.getElementById("indentSize"),
+  fontSize: document.getElementById("fontSize"),
+};
+
+settingsELs.width.value = settings.width;
+settingsELs.height.value = settings.height;
+settingsELs.indentSize.value = settings.indentSize;
+settingsELs.fontSize.value = settings.fontSize;
+
+var editor = ace.edit("editor");
+editor.session.setMode("ace/mode/javascript");
+editor.setTheme("ace/theme/monokai");
+editor.setOptions({
+  tabSize: settings.indentSize,
+  wrap : true,
+  fontSize: settings.fontSize + "px",
+});
+
+var editorRightMargin = 50;
+
+var editorEL = document.getElementById("editor");
+editorEL.style.height = settings.height + 2 + "px";
+editorEL.style.width = window.innerWidth - editorRightMargin - settings.width + "px";
+
+var buttonsBoxEL = document.getElementById("buttonsBox");
+buttonsBox.style.width = window.innerWidth - editorRightMargin + 5 + "px";
+
+var runButtonEL = document.getElementById("runButton");
+var canvasBoxEl = document.getElementById("canvasBox");
+runButtonEL.style.marginLeft = window.innerWidth - editorRightMargin - 303 + "px";
+runButtonEL.onclick = function(){
+  canvasBoxEl.innerHTML = "";
+  
+  var codeScript = document.createElement("script");
+  codeScript.innerHTML = editor.getValue();
+  codeScript.id = "PJS_code";
+  codeScript.type = "data";
+  codeScript.dataset.width = settings.width;
+  codeScript.dataset.height = settings.height;
+  canvasBoxEl.appendChild(codeScript);
+  
+  var runScript = document.createElement("script");
+  runScript.src = "libs/run_pjs.js";
+  canvasBoxEl.appendChild(runScript);
+};
+
+var stopButtonEL = document.getElementById("stopButton");
+stopButtonEL.onclick = function(){
+  canvasBoxEl.innerHTML = "";
+};
+
+var settingsEL = document.getElementById("settings");
+var settingsButtonEL = document.getElementById("settingsButton");
+settingsButtonEL.onclick = function(){
+  settingsEL.style.display = "block";
+};
+
+var cancelButtonEL = document.getElementById("settings_cancelButton");
+cancelButtonEL.onclick = function(){
+  settingsEL.style.display = "none";
+  
+  settingsELs.width.value = settings.width;
+  settingsELs.height.value = settings.height;
+  settingsELs.indentSize.value = settings.indentSize;
+  settingsELs.fontSize.value = settings.fontSize;
+};
+
+var saveButtonEL = document.getElementById("settings_saveButton");
+saveButtonEL.onclick = function(){
+  settingsEL.style.display = "none";
+  
+  settings.width = settingsELs.width.value;
+  settings.height = settingsELs.height.value;
+  settings.indentSize = settingsELs.indentSize.value;
+  settings.fontSize = settingsELs.fontSize.value;
+
+  editorEL.style.height = (parseInt(settings.height, 10) + 2) + "px";
+  editorEL.style.width = window.innerWidth - editorRightMargin - settings.width + "px";
+
+  buttonsBox.style.width = window.innerWidth - editorRightMargin + 5 + "px";
+  runButtonEL.style.marginLeft = window.innerWidth - editorRightMargin - 303 + "px";
+  
+  editor.setOption("tabSize", settings.indentSize);
+  editor.setOption("fontSize", settings.fontSize + "px");
+};
+
+  </script>
+  
+</body>
+</html>
