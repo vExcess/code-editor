@@ -5,7 +5,6 @@
   <title>PJS Editor</title>
   <style>
     body {
-      margin: 10px;
       padding-bottom: 10px;
     }
 
@@ -20,7 +19,6 @@
       background-color: white;
       border: 1px gray solid;
       border-radius: 3px;
-      color: rgb(24, 101, 242);
       font-family: sans-serif;
       font-size: 16px;
       font-weight: 400;
@@ -33,35 +31,29 @@
     }
 
     #editor {
-      margin-right: 5px;
+      margin-right: 0px;
       margin-bottom: 0px;
     }
 
-    #canvasBox {
+    #outputWindow {
       margin: 0px;
       padding: 0px;
-    }
-    canvas {
-      margin: 0px;
-      padding: 0px;
-      border: 1px black solid;
+      border: 1px solid gray;
     }
 
     #settings {
-      width: 80%;
-      height: 400px;
-      transform: translate(9%, 75px);
-      background-color: white;
-      position: absolute;
+      position: fixed;
+      width: 500px;
+      height: 80%;
       color: black;
       font-family: sans-serif;
-      border: 4px black solid;
+      border: 3px rgb(128, 128, 128) solid;
       border-radius: 10px;
-      padding: 8px;
+      padding: 16px;
       padding-top: 0px;
       font-size: 15px;
       overflow: auto;
-      z-index: 2;
+      z-index: 5;
       display: none;
     }
     #settings p {
@@ -72,18 +64,23 @@
       margin-bottom: 5px;
     }
     #settings h3 {
-      color: rgb(50, 50, 50);
       margin-bottom: 5px;
     }
-    #settings select {
-      margin: 1px;
-      color: rgb(50, 50, 50);
+    #settings select, #settings input {
+      margin: 0px;
+      width: 150px;
+      height: 30px;
       border: 1px black solid;
       border-radius: 4px;
     }
     #settings select:hover {
-      margin-top: -1px;
-      color: rgb(50, 50, 50);
+      margin: 0px;
+      border: 2px rgb(24, 101, 242) solid;
+      border-radius: 4px;
+    }
+    #settings input:hover {
+      margin: 0px;
+      margin-bottom: -2px;
       border: 2px rgb(24, 101, 242) solid;
       border-radius: 4px;
     }
@@ -105,23 +102,21 @@
     <p></p>
     
     <h3>Width</h3>
-    <select id="canvasWidth">
-      <option value="400">400 (default)</option>
-      <option value="500">500</option>
-      <option value="600">600</option>
-    </select>
+    <input id="canvasWidth" type="number" value="400">
         
     <h3>Height</h3>
-    <select id="canvasHeight">
-      <option value="400">400 (default)</option>
-      <option value="500">500</option>
-      <option value="600">600</option>
-    </select>
+    <input id="canvasHeight" type="number" value="400">
     
     <h3>Indent Width</h3>
     <select id="indentSize">
       <option value="2">2 spaces</option>
       <option value="4">4 spaces (default)</option>
+    </select>
+
+    <h3>Theme</h3>
+    <select id="editorTheme">
+      <option value="monokai">Dark Mode</option>
+      <option value="textmate">Light Mode</option>
     </select>
     
     <h3>Font Size</h3>
@@ -139,9 +134,9 @@
     
   </div>
   
-  <div style="display: flex; margin: 0px; padding: 0px;">
+  <div id="editorContainer" style="display: flex; margin: 0px; padding: 0px;">
     <div id="editor"></div>
-    <div id="canvasBox"></div>
+    <iframe id="outputWindow" width="400" height="400" style="background-color: white;"></iframe>
   </div>
   
   <div id="buttonsBox">
@@ -155,103 +150,237 @@
   
   <script>
 var settings = {
+  // 900, 600
   width: 400,
   height: 400,
-  indentSize: 4,
+  indentSize: 2,
   fontSize: 12,
+  mode: "html",
+  theme: "monokai",
 };
 
 var settingsELs = {
   width: document.getElementById("canvasWidth"),
   height: document.getElementById("canvasHeight"),
   indentSize: document.getElementById("indentSize"),
+  theme: document.getElementById("editorTheme"),
   fontSize: document.getElementById("fontSize"),
 };
 
 settingsELs.width.value = settings.width;
 settingsELs.height.value = settings.height;
 settingsELs.indentSize.value = settings.indentSize;
+settingsELs.theme.value = settings.theme;
 settingsELs.fontSize.value = settings.fontSize;
 
 var editor = ace.edit("editor");
-editor.session.setMode("ace/mode/javascript");
-editor.setTheme("ace/theme/monokai");
+editor.session.setMode("ace/mode/" + settings.mode);
 editor.setOptions({
+  showPrintMargin: false,
   tabSize: settings.indentSize,
   wrap : true,
   fontSize: settings.fontSize + "px",
 });
 
-var editorRightMargin = 50;
+var HTMLStarterCode = '<!DOCTYPE html>\n<html>\n\t<head>\n\t\t<meta charset="utf-8">\n\t\t<title>New webpage</title>\n\t</head>\n\t<body>\n\n\t</body>\n</html>';
+editor.session.setValue(HTMLStarterCode);
+
+var editorContainerEL = document.getElementById("editorContainer");
 
 var editorEL = document.getElementById("editor");
-editorEL.style.height = settings.height + 2 + "px";
-editorEL.style.width = window.innerWidth - editorRightMargin - settings.width + "px";
-
+var outputFrameEL = document.getElementById("outputWindow");
 var buttonsBoxEL = document.getElementById("buttonsBox");
-buttonsBox.style.width = window.innerWidth - editorRightMargin + 5 + "px";
 
-var runButtonEL = document.getElementById("runButton");
-var canvasBoxEl = document.getElementById("canvasBox");
-runButtonEL.style.marginLeft = window.innerWidth - editorRightMargin - 303 + "px";
-runButtonEL.onclick = function(){
-  canvasBoxEl.innerHTML = "";
-  
-  var codeScript = document.createElement("script");
-  codeScript.innerHTML = editor.getValue();
-  codeScript.id = "PJS_code";
-  codeScript.type = "data";
-  codeScript.dataset.width = settings.width;
-  codeScript.dataset.height = settings.height;
-  canvasBoxEl.appendChild(codeScript);
-  
-  var runScript = document.createElement("script");
-  runScript.src = "libs/run_pjs.js";
-  canvasBoxEl.appendChild(runScript);
-};
-
-var stopButtonEL = document.getElementById("stopButton");
-stopButtonEL.onclick = function(){
-  canvasBoxEl.innerHTML = "";
-};
+var ifrWin = outputFrameEL.contentWindow || outputFrameEL.window;
+var ifrDoc = outputFrameEL.contentDocument || ifrWin.document;
+outputFrameEL.sandbox.add("allow-pointer-lock", "allow-same-origin", "allow-scripts", "allow-popups", "allow-modals", "allow-forms");
 
 var settingsEL = document.getElementById("settings");
-var settingsButtonEL = document.getElementById("settingsButton");
-settingsButtonEL.onclick = function(){
-  settingsEL.style.display = "block";
-};
 
 var cancelButtonEL = document.getElementById("settings_cancelButton");
+var saveButtonEL = document.getElementById("settings_saveButton");
+
+var settingsButtonEL = document.getElementById("settingsButton");
+var runButtonEL = document.getElementById("runButton");
+var stopButtonEL = document.getElementById("stopButton");
+
+document.body.style.margin = "10px";
+
+function updateTheme () {
+  if (settings.theme === "monokai") {
+    var allEls;
+    document.body.style.backgroundColor = "rgb(20, 22, 25)";
+
+    settingsEL.style.backgroundColor = "rgb(31, 34, 39)";
+
+    allEls = document.body.getElementsByTagName("button");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.backgroundColor = "rgb(31, 34, 39)";
+      allEls[i].style.color = "rgb(0, 150, 255)";
+    }
+
+    allEls = document.body.getElementsByTagName("h1");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.color = "rgb(225, 225, 225)";
+    }
+
+    allEls = document.body.getElementsByTagName("h3");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.color = "rgb(225, 225, 225)";
+    }
+
+    allEls = document.body.getElementsByTagName("input");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.backgroundColor = "rgb(20, 22, 25)";
+      allEls[i].style.color = "rgb(200, 200, 200)";
+    }
+
+    allEls = document.body.getElementsByTagName("select");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.backgroundColor = "rgb(20, 22, 25)";
+      allEls[i].style.color = "rgb(200, 200, 200)";
+    }
+
+  } else if (settings.theme === "textmate") {
+    var allEls;
+    document.body.style.backgroundColor = "rgb(255, 255, 255)";
+
+    settingsEL.style.backgroundColor = "rgb(255, 255, 255)";
+
+    allEls = document.body.getElementsByTagName("button");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.backgroundColor = "rgb(255, 255, 255)";
+      allEls[i].style.color = "rgb(24, 101, 242)";
+    }
+
+    allEls = document.body.getElementsByTagName("h1");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.color = "rgb(0, 0, 0)";
+    }
+
+    allEls = document.body.getElementsByTagName("h3");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.color = "rgb(50, 50, 50)";
+    }
+
+    allEls = document.body.getElementsByTagName("input");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.backgroundColor = "rgb(255, 255, 255)";
+      allEls[i].style.color = "rgb(0, 0, 0)";
+    }
+
+    allEls = document.body.getElementsByTagName("select");
+    for (var i = 0; i < allEls.length; i++) {
+      allEls[i].style.backgroundColor = "rgb(255, 255, 255)";
+      allEls[i].style.color = "rgb(0, 0, 0)";
+    }
+  }
+
+  editor.setTheme("ace/theme/" + settings.theme);
+}
+updateTheme();
+
+function resizeEditor () {
+  var editorRightMargin = document.body.style.margin;
+  editorRightMargin = 2 * editorRightMargin.slice(0, editorRightMargin.length - 2) + 2;
+
+  editorEL.style.width = window.innerWidth - editorRightMargin - settings.width + "px";
+  editorEL.style.height = settings.height + 2 + "px";
+
+  outputFrameEL.width = settings.width;
+  outputFrameEL.height = settings.height;
+
+  buttonsBox.style.width = window.innerWidth - editorRightMargin - 3 + "px";
+
+  runButtonEL.style.marginLeft = window.innerWidth - editorRightMargin - 311 + "px";
+
+  editor.resize();
+
+  if (settingsEL.style.display === "block") {
+    settingsEL.style.left = window.innerWidth / 2 - 266 + "px";
+    settingsEL.style.top = (window.innerHeight / 2) - (window.innerHeight * 0.8 / 2) + "px";
+  }
+}
+resizeEditor();
+
+window.addEventListener('resize', function() {
+  resizeEditor();
+}, true);
+
+
+function clearIframeDoc () {
+  outputFrameEL.remove();
+  editorContainerEL.appendChild(outputFrameEL);
+
+  ifrWin = outputFrameEL.contentWindow || outputFrameEL.window;
+  ifrDoc = outputFrameEL.contentDocument || ifrWin.document;
+}
+
+runButtonEL.onclick = function(){
+  clearIframeDoc();
+
+  var code = editor.getValue();
+
+  if (settings.mode === "javscript") {
+    ifrDoc.write('<span style="display: none;"></span>');
+    ifrDoc.write('\<script\>' + code + '\</script\>');
+  } else if (settings.mode === "html") {
+    ifrDoc.write(code);
+  }
+
+  // canvasBoxEl.innerHTML = "";
+  
+  // var codeScript = document.createElement("script");
+  // codeScript.innerHTML = editor.getValue();
+  // codeScript.id = "PJS_code";
+  // codeScript.type = "data";
+  // codeScript.dataset.width = settings.width;
+  // codeScript.dataset.height = settings.height;
+  // canvasBoxEl.appendChild(codeScript);
+  
+  // var runScript = document.createElement("script");
+  // runScript.src = "libs/run_pjs.js";
+  // canvasBoxEl.appendChild(runScript);
+};
+
+stopButtonEL.onclick = function(){
+  clearIframeDoc();
+};
+
+settingsButtonEL.onclick = function(){
+  settingsEL.style.display = "block";
+  settingsEL.style.left = window.innerWidth / 2 - 266 + "px";
+  settingsEL.style.top = (window.innerHeight / 2) - (window.innerHeight * 0.8 / 2) + "px";
+};
+
 cancelButtonEL.onclick = function(){
   settingsEL.style.display = "none";
   
   settingsELs.width.value = settings.width;
   settingsELs.height.value = settings.height;
   settingsELs.indentSize.value = settings.indentSize;
+  settingsELs.theme.value = settings.theme;
   settingsELs.fontSize.value = settings.fontSize;
 };
 
-var saveButtonEL = document.getElementById("settings_saveButton");
 saveButtonEL.onclick = function(){
   settingsEL.style.display = "none";
   
-  settings.width = settingsELs.width.value;
-  settings.height = settingsELs.height.value;
-  settings.indentSize = settingsELs.indentSize.value;
-  settings.fontSize = settingsELs.fontSize.value;
-
-  editorEL.style.height = (parseInt(settings.height, 10) + 2) + "px";
-  editorEL.style.width = window.innerWidth - editorRightMargin - settings.width + "px";
-
-  buttonsBox.style.width = window.innerWidth - editorRightMargin + 5 + "px";
-  runButtonEL.style.marginLeft = window.innerWidth - editorRightMargin - 303 + "px";
+  settings.width = parseInt(settingsELs.width.value, 10);
+  settings.height = parseInt(settingsELs.height.value, 10);
+  settings.indentSize = parseInt(settingsELs.indentSize.value, 10);
+  settings.theme = settingsELs.theme.value;
+  settings.fontSize = parseInt(settingsELs.fontSize.value, 10);
   
   editor.setOption("tabSize", settings.indentSize);
   editor.setOption("fontSize", settings.fontSize + "px");
+
+  updateTheme();
+
+  resizeEditor();
 };
 
   </script>
   
 </body>
 </html>
-
