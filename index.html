@@ -100,6 +100,12 @@
     <h1>Settings</h1>
     
     <p></p>
+
+    <h3>Mode</h3>
+    <select id="codeLanguage">
+      <option value="javascript">Processing.js</option>
+      <option value="html">HTML</option>
+    </select>
     
     <h3>Width</h3>
     <input id="canvasWidth" type="number" value="400">
@@ -151,15 +157,16 @@
   <script>
 var settings = {
   // 900, 600
+  mode: "javascript",
   width: 400,
   height: 400,
   indentSize: 2,
   fontSize: 12,
-  mode: "html",
   theme: "monokai",
 };
 
 var settingsELs = {
+  mode: document.getElementById("codeLanguage"),
   width: document.getElementById("canvasWidth"),
   height: document.getElementById("canvasHeight"),
   indentSize: document.getElementById("indentSize"),
@@ -167,6 +174,7 @@ var settingsELs = {
   fontSize: document.getElementById("fontSize"),
 };
 
+settingsELs.mode.value = settings.mode;
 settingsELs.width.value = settings.width;
 settingsELs.height.value = settings.height;
 settingsELs.indentSize.value = settings.indentSize;
@@ -183,7 +191,9 @@ editor.setOptions({
 });
 
 var HTMLStarterCode = '<!DOCTYPE html>\n<html>\n\t<head>\n\t\t<meta charset="utf-8">\n\t\t<title>New webpage</title>\n\t</head>\n\t<body>\n\n\t</body>\n</html>';
-editor.session.setValue(HTMLStarterCode);
+if (settings.mode === "html") {
+  editor.session.setValue(HTMLStarterCode);
+}
 
 var editorContainerEL = document.getElementById("editorContainer");
 
@@ -314,6 +324,8 @@ function clearIframeDoc () {
 
   ifrWin = outputFrameEL.contentWindow || outputFrameEL.window;
   ifrDoc = outputFrameEL.contentDocument || ifrWin.document;
+
+  console.log(ifrDoc);
 }
 
 runButtonEL.onclick = function(){
@@ -321,26 +333,32 @@ runButtonEL.onclick = function(){
 
   var code = editor.getValue();
 
-  if (settings.mode === "javscript") {
-    ifrDoc.write('<span style="display: none;"></span>');
+  if (settings.mode === "javascript") {
+    code = `
+      \<!DOCTYPE html\>
+      \<html\>
+      \<head\>
+          \<meta charset="utf-8"\>
+          \<style\>
+          body {
+            margin: 0px;
+            overflow: hidden;
+          }
+          \</style\>
+      \</head\>
+      \<body\>
+    ` + 
+    '   \<script id="PJS_code" type="data" data-width="' + settings.width + '" data-height="' + settings.height + '"\>' + 
+          code + 
+    `   \</script\>
+        \<script src="libs/run_pjs.js"\>\</script\>
+      \</body\>
+      \</html\>
+    `;
     ifrDoc.write('\<script\>' + code + '\</script\>');
-  } else if (settings.mode === "html") {
-    ifrDoc.write(code);
   }
 
-  // canvasBoxEl.innerHTML = "";
-  
-  // var codeScript = document.createElement("script");
-  // codeScript.innerHTML = editor.getValue();
-  // codeScript.id = "PJS_code";
-  // codeScript.type = "data";
-  // codeScript.dataset.width = settings.width;
-  // codeScript.dataset.height = settings.height;
-  // canvasBoxEl.appendChild(codeScript);
-  
-  // var runScript = document.createElement("script");
-  // runScript.src = "libs/run_pjs.js";
-  // canvasBoxEl.appendChild(runScript);
+  ifrDoc.write(code);
 };
 
 stopButtonEL.onclick = function(){
@@ -356,6 +374,7 @@ settingsButtonEL.onclick = function(){
 cancelButtonEL.onclick = function(){
   settingsEL.style.display = "none";
   
+  settingsELs.mode.value = settings.mode;
   settingsELs.width.value = settings.width;
   settingsELs.height.value = settings.height;
   settingsELs.indentSize.value = settings.indentSize;
@@ -366,6 +385,7 @@ cancelButtonEL.onclick = function(){
 saveButtonEL.onclick = function(){
   settingsEL.style.display = "none";
   
+  settings.mode = settingsELs.mode.value;
   settings.width = parseInt(settingsELs.width.value, 10);
   settings.height = parseInt(settingsELs.height.value, 10);
   settings.indentSize = parseInt(settingsELs.indentSize.value, 10);
