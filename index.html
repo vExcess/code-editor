@@ -158,7 +158,6 @@
   
   <script>
 var settings = {
-  // 900, 600
   mode: "javascript",
   width: 400,
   height: 400,
@@ -190,6 +189,17 @@ editor.setOptions({
   tabSize: settings.indentSize,
   wrap : true,
   fontSize: settings.fontSize + "px",
+  enableBasicAutocompletion: true,
+  enableLiveAutocompletion: true,
+});
+
+editor.commands.addCommand({
+  name: 'myCommand',
+  bindKey: {win: 'Ctrl-Enter',  mac: 'Command-Enter'},
+  exec: function(editor) {
+    runButtonEL.click();
+  },
+  readOnly: true, 
 });
 
 var HTMLStarterCode = '<!DOCTYPE html>\n<html>\n\t<head>\n\t\t<meta charset="utf-8">\n\t\t<title>New webpage</title>\n\t</head>\n\t<body>\n\n\t</body>\n</html>';
@@ -209,6 +219,7 @@ outputFrameEL.sandbox.add("allow-pointer-lock", "allow-same-origin", "allow-scri
 
 var settingsEL = document.getElementById("settings");
 
+var fullscreenButtonEl = document.getElementById("fullscreenButton");
 var cancelButtonEL = document.getElementById("settings_cancelButton");
 var saveButtonEL = document.getElementById("settings_saveButton");
 
@@ -330,34 +341,88 @@ function clearIframeDoc () {
   console.log(ifrDoc);
 }
 
+fullscreenButtonEl.onclick = function () {
+  var code = editor.getValue();
+  
+  var w = ifrWin.open();
+  w.document.open();
+  if (settings.mode === "html") {
+    w.document.write(code);
+  } else if (settings.mode === "javascript") {
+    var pjsCode = `
+\<!DOCTYPE html\>
+\<html\>
+\<head\>
+  \<meta charset="utf-8"\>
+  \<title\>Fullscreen View\</title\>
+  \<style\>
+    body {
+      margin: 0px;
+      overflow: hidden;
+    }
+    canvas {
+      border: 1px solid black;
+    }
+    #canvasBox {
+      text-align: center;
+    }
+  \</style\>
+\</head\>
+\<body\>
+
+  \<div id='canvasBox'\>
+    \<script id='PJS_code' type='data' data-width='` + settings.width + `' data-height='` + settings.height + `'\>` + code + `\</script\>
+  \</div\>
+  
+  \<script src='libs/run_pjs.js'\>\</script\>
+  
+  \<script id="temp"\>
+    var canvasBox = document.getElementById('canvasBox');
+    var codeElement = document.getElementById("PJS_code");
+    
+    var centerElementInterval = setInterval(function () {
+      var pjsCanvas = document.getElementById('pjs-canvas');
+      var pjsRunScript = document.getElementById('pjs-runScript');
+      if (pjsCanvas && pjsRunScript) {
+        canvasBox.style.marginTop = window.innerHeight / 2 - pjsCanvas.height / 2 + 'px';
+        clearInterval(centerElementInterval);
+      }
+    }, 20);
+  \</script\>
+  
+\</body\>
+\</html\>
+    `;
+    w.document.write(pjsCode);
+  }  
+  w.document.close();
+};
+
 runButtonEL.onclick = function(){
   clearIframeDoc();
 
   var code = editor.getValue();
 
   if (settings.mode === "javascript") {
-    code = `
-      \<!DOCTYPE html\>
-      \<html\>
-      \<head\>
-          \<meta charset="utf-8"\>
-          \<style\>
-          body {
-            margin: 0px;
-            overflow: hidden;
-          }
-          \</style\>
-      \</head\>
-      \<body\>
-    ` + 
-    '   \<script id="PJS_code" type="data" data-width="' + settings.width + '" data-height="' + settings.height + '"\>' + 
+    code = '' +
+    '\<!DOCTYPE html\>' +
+    '\<html\>' +
+    '\<head\>' +
+    '  \<meta charset="utf-8"\>' +
+    '  \<style\>' +
+    '     body {' +
+    '       margin: 0px;' +
+    '       overflow: hidden;' +
+    '     }' +
+    '  \</style\>' +
+    '\</head\>' +
+    '\<body\>' +
+    '  \<script id="PJS_code" type="data" data-width="' + settings.width + '" data-height="' + settings.height + '"\>' + 
           code + 
-    `   \</script\>
-        \<script src="libs/run_pjs.js"\>\</script\>
-      \</body\>
-      \</html\>
-    `;
-    ifrDoc.write('\<script\>' + code + '\</script\>');
+    '  \</script\>' +
+    '    \<script src="libs/run_pjs.js"\>\</script\>' +
+    '  \</body\>' +
+    '  \</html\>';
   }
 
   ifrDoc.write(code);
