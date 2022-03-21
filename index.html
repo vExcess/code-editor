@@ -229,6 +229,15 @@ var stopButtonEL = document.getElementById("stopButton");
 
 document.body.style.margin = "10px";
 
+function onFirstEditorEdit () {
+  window.addEventListener('beforeunload', function (e) {
+    e.preventDefault();
+    e.returnValue = '';
+  });
+  editorEL.removeEventListener("keyup", onFirstEditorEdit);
+}
+editorEL.addEventListener("keyup", onFirstEditorEdit);
+
 function updateTheme () {
   if (settings.theme === "monokai") {
     var allEls;
